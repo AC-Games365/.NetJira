@@ -1,0 +1,534 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:AG.Desktop"
+        x:Class="AG.Desktop.MainWindow"
+        Title="Jira Studio Agile - AG Desktop"
+        Width="1340" Height="860"
+        WindowStartupLocation="CenterScreen"
+        Background="#0B0F19">
+
+    <Grid RowDefinitions="Auto, Auto, *">
+
+        <!-- 1. EN-TÊTE PRINCIPAL (STYLE JIRA CLOUD) -->
+        <Border Grid.Row="0"
+                Background="#111827"
+                BorderBrush="#1F2937"
+                BorderThickness="0,0,0,1"
+                Padding="20,12">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <!-- Logo & Nom de projet -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                    <Border Background="#2563EB" CornerRadius="10" Width="42" Height="42">
+                        <TextBlock Text="⚡" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="PROJET AG" FontWeight="Bold" FontSize="16" Foreground="#F9FAFB"/>
+                            <Border Background="#1E3A8A" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                <TextBlock Text="SCRUM BOARD" FontSize="10" FontWeight="Bold" Foreground="#93C5FD"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="Gestion des Sprints et Backlog • SQLite local" FontSize="11" Foreground="#9CA3AF"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Sélecteur de Sprint & Stats rapides -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16" VerticalAlignment="Center">
+                    <TextBlock Text="Sprint actif :" Foreground="#9CA3AF" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"/>
+                    <ComboBox x:Name="SprintFilterComboBox" Width="280" SelectedIndex="0"/>
+
+                    <Border Background="#1F2937" CornerRadius="6" Padding="10,6" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Points du Sprint :" FontSize="12" Foreground="#9CA3AF"/>
+                            <TextBlock x:Name="SprintPointsTextBlock" Text="0 pts" FontSize="12" FontWeight="Bold" Foreground="#60A5FA"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Boutons d'actions globales -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Button x:Name="CompleteSprintButton"
+                            Content="🏁 Clôturer le Sprint"
+                            Background="#065F46"
+                            Foreground="White"
+                            Padding="12,7"
+                            CornerRadius="6"
+                            FontWeight="SemiBold"
+                            FontSize="12"/>
+
+                    <Button x:Name="RefreshButton"
+                            Content="🔄 Actualiser"
+                            Background="#1F2937"
+                            BorderBrush="#374151"
+                            BorderThickness="1"
+                            Foreground="#E5E7EB"
+                            Padding="12,7"
+                            CornerRadius="6"
+                            FontSize="12"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. BARRE D'OUTILS ET FILTRES (RECHERCHE, TYPE, ASSIGNÉ) -->
+        <Border Grid.Row="1"
+                Background="#0F172A"
+                BorderBrush="#1E293B"
+                BorderThickness="0,0,0,1"
+                Padding="20,10">
+            <Grid ColumnDefinitions="280, Auto, Auto, *, Auto">
+                <!-- Champ de recherche en temps réel -->
+                <TextBox Grid.Column="0"
+                         x:Name="SearchBox"
+                         PlaceholderText="🔍 Rechercher un ticket (titre, desc)..."
+                         Background="#1E293B"
+                         Foreground="White"
+                         BorderBrush="#334155"
+                         Padding="10,6"
+                         CornerRadius="6"
+                         VerticalAlignment="Center"/>
+
+                <!-- Filtre par Type -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Type :" Foreground="#94A3B8" VerticalAlignment="Center" FontSize="12"/>
+                    <ComboBox x:Name="TypeFilterComboBox" Width="130" SelectedIndex="0">
+                        <ComboBoxItem Content="Tous"/>
+                        <ComboBoxItem Content="BUG"/>
+                        <ComboBoxItem Content="STORY"/>
+                        <ComboBoxItem Content="TASK"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Filtre par Assigné -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Assigné :" Foreground="#94A3B8" VerticalAlignment="Center" FontSize="12"/>
+                    <ComboBox x:Name="AssigneeFilterComboBox" Width="150" SelectedIndex="0"/>
+                </StackPanel>
+
+                <!-- Métriques / Compteur de filtres -->
+                <TextBlock Grid.Column="3"
+                           x:Name="FilterStatusTextBlock"
+                           Text="Affichage de tous les tickets"
+                           Foreground="#64748B"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Margin="0,0,16,0"/>
+
+                <!-- Bouton réinitialiser -->
+                <Button Grid.Column="4"
+                        x:Name="ResetFiltersButton"
+                        Content="Effacer filtres"
+                        Background="#334155"
+                        Foreground="#E2E8F0"
+                        FontSize="11"
+                        Padding="8,5"
+                        CornerRadius="4"
+                        VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- 3. ZONE PRINCIPALE : FORMULAIRES (GAUCHE) & BOARD KANBAN (DROITE) -->
+        <Grid Grid.Row="2" ColumnDefinitions="360, *" Margin="18">
+
+            <!-- PANNEAU GAUCHE : FORMULAIRES JIRA (ACCORDÉON / SCROLL) -->
+            <ScrollViewer Grid.Column="0" Margin="0,0,16,0">
+                <StackPanel Spacing="14">
+
+                    <!-- Formulaire Nouveau Ticket complet -->
+                    <Border Background="#111827" CornerRadius="12" Padding="18" BorderBrush="#1F2937" BorderThickness="1">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="➕ Créer un Ticket" FontSize="15" FontWeight="Bold" Foreground="#F9FAFB"/>
+                                <Border Background="#1E3A8A" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                    <TextBlock Text="JIRA ISSUE" FontSize="9" FontWeight="Bold" Foreground="#93C5FD"/>
+                                </Border>
+                            </StackPanel>
+
+                            <TextBlock Text="Titre :" FontSize="12" Foreground="#9CA3AF"/>
+                            <TextBox x:Name="NewTicketTitleTextBox"
+                                     PlaceholderText="Ex: Intégrer passerelle de paiement..."
+                                     Background="#0B0F19"
+                                     Foreground="White"
+                                     BorderBrush="#374151"/>
+
+                            <TextBlock Text="Description &amp; Critères d'acceptation :" FontSize="12" Foreground="#9CA3AF"/>
+                            <TextBox x:Name="NewTicketDescriptionTextBox"
+                                     PlaceholderText="Décrivez le problème, étapes pour reproduire..."
+                                     AcceptsReturn="True"
+                                     Height="70"
+                                     Background="#0B0F19"
+                                     Foreground="White"
+                                     BorderBrush="#374151"/>
+
+                            <!-- Ligne Type & Priorité -->
+                            <Grid ColumnDefinitions="*, *">
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0" Spacing="4">
+                                    <TextBlock Text="Type :" FontSize="12" Foreground="#9CA3AF"/>
+                                    <ComboBox x:Name="NewTicketTypeComboBox" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                        <ComboBoxItem Content="TASK"/>
+                                        <ComboBoxItem Content="STORY"/>
+                                        <ComboBoxItem Content="BUG"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="4">
+                                    <TextBlock Text="Priorité :" FontSize="12" Foreground="#9CA3AF"/>
+                                    <ComboBox x:Name="NewTicketPriorityComboBox" HorizontalAlignment="Stretch" SelectedIndex="1">
+                                        <ComboBoxItem Content="LOW"/>
+                                        <ComboBoxItem Content="MEDIUM"/>
+                                        <ComboBoxItem Content="HIGH"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Ligne Story Points & Assigné -->
+                            <Grid ColumnDefinitions="110, *">
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0" Spacing="4">
+                                    <TextBlock Text="Story Points :" FontSize="12" Foreground="#9CA3AF"/>
+                                    <ComboBox x:Name="NewTicketPointsComboBox" HorizontalAlignment="Stretch" SelectedIndex="2">
+                                        <ComboBoxItem Content="1 pt"/>
+                                        <ComboBoxItem Content="2 pts"/>
+                                        <ComboBoxItem Content="3 pts"/>
+                                        <ComboBoxItem Content="5 pts"/>
+                                        <ComboBoxItem Content="8 pts"/>
+                                        <ComboBoxItem Content="13 pts"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="4">
+                                    <TextBlock Text="Assigné à :" FontSize="12" Foreground="#9CA3AF"/>
+                                    <TextBox x:Name="NewTicketAssigneeTextBox"
+                                             Text="Clément A."
+                                             Background="#0B0F19"
+                                             Foreground="White"
+                                             BorderBrush="#374151"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Sprint cible -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Sprint d'affectation :" FontSize="12" Foreground="#9CA3AF"/>
+                                <ComboBox x:Name="NewTicketSprintComboBox" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+
+                            <Button x:Name="CreateTicketBtn"
+                                    Content="➕ Créer et Ajouter au Board"
+                                    Background="#2563EB"
+                                    Foreground="White"
+                                    FontWeight="Bold"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="10"
+                                    CornerRadius="6"
+                                    Margin="0,8,0,0"/>
+
+                            <TextBlock x:Name="NotificationLabel"
+                                       Text=""
+                                       FontSize="12"
+                                       Foreground="#10B981"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Formulaire Nouveau Sprint -->
+                    <Border Background="#111827" CornerRadius="12" Padding="16" BorderBrush="#1F2937" BorderThickness="1">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="🏃 Créer un Nouveau Sprint" FontSize="14" FontWeight="Bold" Foreground="#F9FAFB"/>
+                            <TextBox x:Name="NewSprintNameTextBox"
+                                     PlaceholderText="Nom (ex: Sprint 3 - Notifications)"
+                                     Background="#0B0F19"
+                                     Foreground="White"
+                                     BorderBrush="#374151"/>
+                            <TextBox x:Name="NewSprintGoalTextBox"
+                                     PlaceholderText="Objectif du Sprint..."
+                                     Background="#0B0F19"
+                                     Foreground="White"
+                                     BorderBrush="#374151"/>
+                            <Button x:Name="CreateSprintBtn"
+                                    Content="Créer le Sprint"
+                                    Background="#059669"
+                                    Foreground="White"
+                                    FontWeight="SemiBold"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="8"
+                                    CornerRadius="6"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Métriques Globales -->
+                    <Border Background="#111827" CornerRadius="12" Padding="16" BorderBrush="#1F2937" BorderThickness="1">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="📊 Vue d'ensemble du Board" FontSize="14" FontWeight="Bold" Foreground="#F9FAFB"/>
+                            <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto">
+                                <Border Grid.Row="0" Grid.Column="0" Background="#1F2937" CornerRadius="8" Padding="10" Margin="3">
+                                    <StackPanel>
+                                        <TextBlock Text="📋 À FAIRE" FontSize="10" FontWeight="Bold" Foreground="#9CA3AF"/>
+                                        <TextBlock x:Name="CountTodoTextBlock" Text="0" FontSize="18" FontWeight="Bold" Foreground="#F9FAFB"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="#1F2937" CornerRadius="8" Padding="10" Margin="3">
+                                    <StackPanel>
+                                        <TextBlock Text="⚡ EN COURS" FontSize="10" FontWeight="Bold" Foreground="#F59E0B"/>
+                                        <TextBlock x:Name="CountInProgressTextBlock" Text="0" FontSize="18" FontWeight="Bold" Foreground="#FBBF24"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="0" Background="#1F2937" CornerRadius="8" Padding="10" Margin="3">
+                                    <StackPanel>
+                                        <TextBlock Text="✅ TERMINÉS" FontSize="10" FontWeight="Bold" Foreground="#10B981"/>
+                                        <TextBlock x:Name="CountDoneTextBlock" Text="0" FontSize="18" FontWeight="Bold" Foreground="#34D399"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Background="#1F2937" CornerRadius="8" Padding="10" Margin="3">
+                                    <StackPanel>
+                                        <TextBlock Text="📦 BACKLOG" FontSize="10" FontWeight="Bold" Foreground="#818CF8"/>
+                                        <TextBlock x:Name="CountBacklogTextBlock" Text="0" FontSize="18" FontWeight="Bold" Foreground="#A5B4FC"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- PANNEAU DROIT : LE BOARD KANBAN (3 COLONNES CARTES JIRA) -->
+            <Grid Grid.Column="1" ColumnDefinitions="*, *, *">
+
+                <!-- 1. COLONNE TO DO -->
+                <Border Grid.Column="0" Background="#111827" CornerRadius="12" Padding="12" Margin="0,0,8,0" BorderBrush="#1F2937" BorderThickness="1">
+                    <Grid RowDefinitions="Auto, *">
+                        <Border Grid.Row="0" Background="#1F2937" CornerRadius="8" Padding="12,8" Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock Text="📋" FontSize="14"/>
+                                    <TextBlock Text="À FAIRE" FontWeight="Bold" Foreground="#F3F4F6"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#374151" CornerRadius="10" Padding="8,2">
+                                    <TextBlock x:Name="HeaderTodoCount" Text="0" FontWeight="Bold" Foreground="#E5E7EB" FontSize="11"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ListBox Grid.Row="1" x:Name="TodoList" Background="Transparent">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="local:TicketCardViewModel">
+                                    <Border Background="#1E293B" CornerRadius="10" Padding="12" Margin="0,5" BorderBrush="#334155" BorderThickness="1">
+                                        <StackPanel Spacing="8">
+                                            <!-- En-tête de carte : Type, Priorité, Sprint & Points -->
+                                            <Grid ColumnDefinitions="Auto, Auto, *, Auto">
+                                                <Border Grid.Column="0" Background="{Binding TypeBadgeColor}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                                    <TextBlock Text="{Binding Ticket.Type}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <Border Grid.Column="1" Background="{Binding PriorityBadgeColor}" CornerRadius="4" Padding="6,2">
+                                                    <TextBlock Text="{Binding Ticket.Priority}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="2" Text="{Binding SprintTag}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="3" Background="#0F172A" CornerRadius="10" Padding="6,2">
+                                                    <TextBlock Text="{Binding StoryPointsTag}" FontSize="10" FontWeight="Bold" Foreground="#60A5FA"/>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- Titre de la tâche -->
+                                            <TextBlock Text="{Binding Ticket.Title}" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC" TextWrapping="Wrap"/>
+
+                                            <!-- Description détaillée -->
+                                            <TextBlock Text="{Binding DescriptionPreview}" FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap"/>
+
+                                            <!-- Bas de carte : Assigné & Déplacement -->
+                                            <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Border Background="#3B82F6" CornerRadius="10" Width="20" Height="20">
+                                                        <TextBlock Text="{Binding AssigneeInitial}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Ticket.Assignee}" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                    <Button Content="Sprint ▾"
+                                                            Click="OnSprintSelectorClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="#334155"
+                                                            Foreground="White"
+                                                            FontSize="11"
+                                                            Padding="6,3"/>
+                                                    <Button Content="▶ Démarrer"
+                                                            Click="OnMoveToInProgressClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="#D97706"
+                                                            Foreground="White"
+                                                            FontSize="11"
+                                                            FontWeight="SemiBold"
+                                                            Padding="7,3"/>
+                                                    <Button Content="✕"
+                                                            Click="OnDeleteTicketClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="Transparent"
+                                                            Foreground="#EF4444"
+                                                            FontSize="11"
+                                                            Padding="4,2"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+
+                <!-- 2. COLONNE IN PROGRESS -->
+                <Border Grid.Column="1" Background="#111827" CornerRadius="12" Padding="12" Margin="4,0,4,0" BorderBrush="#1F2937" BorderThickness="1">
+                    <Grid RowDefinitions="Auto, *">
+                        <Border Grid.Row="0" Background="#78350F" CornerRadius="8" Padding="12,8" Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock Text="⚡" FontSize="14"/>
+                                    <TextBlock Text="EN COURS" FontWeight="Bold" Foreground="#FEF3C7"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#92400E" CornerRadius="10" Padding="8,2">
+                                    <TextBlock x:Name="HeaderInProgressCount" Text="0" FontWeight="Bold" Foreground="#FEF3C7" FontSize="11"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ListBox Grid.Row="1" x:Name="InProgressList" Background="Transparent">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="local:TicketCardViewModel">
+                                    <Border Background="#1E293B" CornerRadius="10" Padding="12" Margin="0,5" BorderBrush="#B45309" BorderThickness="1">
+                                        <StackPanel Spacing="8">
+                                            <!-- En-tête de carte -->
+                                            <Grid ColumnDefinitions="Auto, Auto, *, Auto">
+                                                <Border Grid.Column="0" Background="{Binding TypeBadgeColor}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                                    <TextBlock Text="{Binding Ticket.Type}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <Border Grid.Column="1" Background="{Binding PriorityBadgeColor}" CornerRadius="4" Padding="6,2">
+                                                    <TextBlock Text="{Binding Ticket.Priority}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="2" Text="{Binding SprintTag}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="3" Background="#0F172A" CornerRadius="10" Padding="6,2">
+                                                    <TextBlock Text="{Binding StoryPointsTag}" FontSize="10" FontWeight="Bold" Foreground="#60A5FA"/>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- Titre de la tâche -->
+                                            <TextBlock Text="{Binding Ticket.Title}" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC" TextWrapping="Wrap"/>
+
+                                            <!-- Description -->
+                                            <TextBlock Text="{Binding DescriptionPreview}" FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap"/>
+
+                                            <!-- Bas de carte : Assigné & Déplacements -->
+                                            <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Border Background="#3B82F6" CornerRadius="10" Width="20" Height="20">
+                                                        <TextBlock Text="{Binding AssigneeInitial}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Ticket.Assignee}" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                    <Button Content="◀"
+                                                            Click="OnMoveToTodoClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="#475569"
+                                                            Foreground="White"
+                                                            FontSize="11"
+                                                            Padding="6,3"/>
+                                                    <Button Content="✔ Terminer"
+                                                            Click="OnMoveToDoneClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="#059669"
+                                                            Foreground="White"
+                                                            FontSize="11"
+                                                            FontWeight="SemiBold"
+                                                            Padding="7,3"/>
+                                                    <Button Content="✕"
+                                                            Click="OnDeleteTicketClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="Transparent"
+                                                            Foreground="#EF4444"
+                                                            FontSize="11"
+                                                            Padding="4,2"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+
+                <!-- 3. COLONNE DONE -->
+                <Border Grid.Column="2" Background="#111827" CornerRadius="12" Padding="12" Margin="8,0,0,0" BorderBrush="#1F2937" BorderThickness="1">
+                    <Grid RowDefinitions="Auto, *">
+                        <Border Grid.Row="0" Background="#064E3B" CornerRadius="8" Padding="12,8" Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock Text="✅" FontSize="14"/>
+                                    <TextBlock Text="TERMINÉ" FontWeight="Bold" Foreground="#D1FAE5"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#065F46" CornerRadius="10" Padding="8,2">
+                                    <TextBlock x:Name="HeaderDoneCount" Text="0" FontWeight="Bold" Foreground="#D1FAE5" FontSize="11"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ListBox Grid.Row="1" x:Name="DoneList" Background="Transparent">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="local:TicketCardViewModel">
+                                    <Border Background="#1E293B" CornerRadius="10" Padding="12" Margin="0,5" BorderBrush="#065F46" BorderThickness="1" Opacity="0.85">
+                                        <StackPanel Spacing="8">
+                                            <!-- En-tête de carte -->
+                                            <Grid ColumnDefinitions="Auto, Auto, *, Auto">
+                                                <Border Grid.Column="0" Background="{Binding TypeBadgeColor}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                                    <TextBlock Text="{Binding Ticket.Type}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <Border Grid.Column="1" Background="{Binding PriorityBadgeColor}" CornerRadius="4" Padding="6,2">
+                                                    <TextBlock Text="{Binding Ticket.Priority}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="2" Text="{Binding SprintTag}" FontSize="11" Foreground="#64748B" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="3" Background="#0F172A" CornerRadius="10" Padding="6,2">
+                                                    <TextBlock Text="{Binding StoryPointsTag}" FontSize="10" FontWeight="Bold" Foreground="#60A5FA"/>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- Titre barré/tamisé -->
+                                            <TextBlock Text="{Binding Ticket.Title}" FontWeight="SemiBold" FontSize="14" Foreground="#9CA3AF" TextWrapping="Wrap"/>
+
+                                            <!-- Description -->
+                                            <TextBlock Text="{Binding DescriptionPreview}" FontSize="11" Foreground="#6B7280" TextWrapping="Wrap"/>
+
+                                            <!-- Bas de carte -->
+                                            <Grid ColumnDefinitions="*, Auto" Margin="0,4,0,0">
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Border Background="#4B5563" CornerRadius="10" Width="20" Height="20">
+                                                        <TextBlock Text="{Binding AssigneeInitial}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Ticket.Assignee}" FontSize="11" Foreground="#9CA3AF" VerticalAlignment="Center"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                    <Button Content="◀ Réouvrir"
+                                                            Click="OnMoveToInProgressClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="#334155"
+                                                            Foreground="White"
+                                                            FontSize="11"
+                                                            Padding="6,3"/>
+                                                    <Button Content="✕"
+                                                            Click="OnDeleteTicketClicked"
+                                                            Tag="{Binding Ticket.Id}"
+                                                            Background="Transparent"
+                                                            Foreground="#EF4444"
+                                                            FontSize="11"
+                                                            Padding="4,2"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
